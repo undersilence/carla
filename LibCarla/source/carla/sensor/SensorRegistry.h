@@ -44,6 +44,8 @@ class ASemanticSegmentationCamera;
 class AInstanceSegmentationCamera;
 class ARssSensor;
 class FWorldObserver;
+// @undersilence
+class AGbufferCamera;
 
 namespace carla {
 namespace sensor {
@@ -71,7 +73,8 @@ namespace sensor {
     std::pair<ASceneCaptureCamera *, s11n::ImageSerializer>,
     std::pair<ASemanticSegmentationCamera *, s11n::ImageSerializer>,
     std::pair<AInstanceSegmentationCamera *, s11n::ImageSerializer>,
-    std::pair<FWorldObserver *, s11n::EpisodeStateSerializer>
+    std::pair<FWorldObserver *, s11n::EpisodeStateSerializer>,
+    std::pair<AGbufferCamera *, s11n::ImageSerializer>
   >;
 
 } // namespace sensor
@@ -81,6 +84,8 @@ namespace sensor {
 
 #ifdef LIBCARLA_SENSOR_REGISTRY_WITH_SENSOR_INCLUDES
 
+// custom part @undersilence
+#include "Carla/Sensor/GbufferCamera.h"
 // 4. Include the sensor here.
 #include "Carla/Sensor/CollisionSensor.h"
 #include "Carla/Sensor/DepthCamera.h"
