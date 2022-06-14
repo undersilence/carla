@@ -100,6 +100,7 @@ class SensorManager:
         self.display_pos = display_pos
         self.sensor = self.init_sensor(sensor_type, transform, attached, sensor_options)
         self.sensor_options = sensor_options
+        self.sensor_type = sensor_type
         self.timer = CustomTimer()
 
         self.time_processing = 0.0
@@ -218,6 +219,7 @@ class SensorManager:
         image.convert(carla.ColorConverter.LogarithmicDepth)
         array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
         array = np.reshape(array, (image.height, image.width, 4))
+        print(f"get depth buffer {image.height}x{image.width}")
         array = array[:, :, :3]
         array = array[:, :, ::-1]
 
@@ -351,7 +353,7 @@ def run_simulation(args, client):
             settings = world.get_settings()
             traffic_manager.set_synchronous_mode(True)
             settings.synchronous_mode = True
-            settings.fixed_delta_seconds = 0.05
+            settings.fixed_delta_seconds = 0.033
             world.apply_settings(settings)
 
 
@@ -367,13 +369,13 @@ def run_simulation(args, client):
 
         # Then, SensorManager can be used to spawn RGBCamera, LiDARs and SemanticLiDARs as needed
         # and assign each of them to a grid position,
-        SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), vehicle, {}, display_pos=[0, 0])
+        # SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), vehicle, {}, display_pos=[0, 0])
 
-        # SensorManager(world, display_manager, 'NormalCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), vehicle, {}, display_pos=[0, 0])
+        SensorManager(world, display_manager, 'NormalCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), None, {}, display_pos=[0, 0])
 
-        # SensorManager(world, display_manager, 'SemanticCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), vehicle, {}, display_pos=[1, 0])
+        # SensorManager(world, display_manager, 'SemanticCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), vehicle, {}, display_pos=[0, 0])
 
-        # SensorManager(world, display_manager, 'DepthCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), vehicle, {}, display_pos=[1, 1])
+        # SensorManager(world, display_manager, 'DepthCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), vehicle, {}, display_pos=[0, 0])
 
 
         #Simulation loop
@@ -397,6 +399,10 @@ def run_simulation(args, client):
                     if event.key == K_ESCAPE or event.key == K_q:
                         call_exit = True
                         break
+
+
+            for sensor in display_manager.get_sensor_list():
+                print(f"{sensor.sensor_type} process time {sensor.time_processing} s")
 
             clock.tick()
             print(f"fps: {clock.get_fps()}")
@@ -437,12 +443,14 @@ def main():
         dest='sync',
         action='store_false',
         help='Asynchronous mode execution')
+
     argparser.set_defaults(sync=True)
     argparser.add_argument(
         '--res',
         metavar='WIDTHxHEIGHT',
         default='1280x720',
         help='window resolution (default: 1280x720)')
+
 
     args = argparser.parse_args()
 
