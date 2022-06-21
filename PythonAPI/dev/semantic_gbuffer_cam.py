@@ -94,6 +94,7 @@ class DisplayManager:
 
 class SensorManager:
     def __init__(self, world, display_man, sensor_type, transform, attached, sensor_options, display_pos):
+        self.frame_count = 0
         self.surface = None
         self.world = world
         self.display_man = display_man
@@ -109,7 +110,6 @@ class SensorManager:
         self.display_man.add_sensor(self)
 
     def init_sensor(self, sensor_type, transform, attached, sensor_options):
-
         if sensor_type == 'DepthCamera':
             camera_bp = self.world.get_blueprint_library().find('sensor.camera.depth')
             disp_size = self.display_man.get_display_size()
@@ -124,7 +124,7 @@ class SensorManager:
 
             return camera
 
-        if sensor_type == 'NormalCamera':
+        elif sensor_type == 'NormalCamera':
             camera_bp = self.world.get_blueprint_library().find('sensor.camera.gbuffer')
             disp_size = self.display_man.get_display_size()
             camera_bp.set_attribute('image_size_x', str(disp_size[0]))
@@ -138,7 +138,7 @@ class SensorManager:
 
             return camera
 
-        if sensor_type == 'SemanticCamera':
+        elif sensor_type == 'SemanticCamera':
             camera_bp = self.world.get_blueprint_library().find('sensor.camera.semantic_segmentation')
             disp_size = self.display_man.get_display_size()
             camera_bp.set_attribute('image_size_x', str(disp_size[0]))
@@ -152,9 +152,7 @@ class SensorManager:
 
             return camera
 
-
-
-        if sensor_type == 'RGBCamera':
+        elif sensor_type == 'RGBCamera':
             camera_bp = self.world.get_blueprint_library().find('sensor.camera.rgb')
             disp_size = self.display_man.get_display_size()
             camera_bp.set_attribute('image_size_x', str(disp_size[0]))
@@ -217,6 +215,10 @@ class SensorManager:
         t_start = self.timer.time()
 
         image.convert(carla.ColorConverter.LogarithmicDepth)
+        # save to file
+        image.save_to_disk(f"output/depth_{self.frame_count}.png")
+        self.frame_count += 1
+
         array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
         array = np.reshape(array, (image.height, image.width, 4))
         print(f"get depth buffer {image.height}x{image.width}")
@@ -226,15 +228,41 @@ class SensorManager:
         if self.display_man.render_enabled():
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
 
+
         t_end = self.timer.time()
         self.time_processing += (t_end-t_start)
         self.tics_processing += 1
 
+    def save_linear_depth_image(self, image):
+        t_start = self.timer.time()
+
+        image.convert(carla.ColorConverter.Depth)
+        # save to file
+        image.save_to_disk(f"output/linear_depth_{self.frame_count}.png")
+        self.frame_count += 1
+
+        array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
+        array = np.reshape(array, (image.height, image.width, 4))
+        print(f"get depth buffer {image.height}x{image.width}")
+        array = array[:, :, :3]
+        array = array[:, :, ::-1]
+
+        if self.display_man.render_enabled():
+            self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+
+
+        t_end = self.timer.time()
+        self.time_processing += (t_end-t_start)
+        self.tics_processing += 1
 
     def save_semantic_image(self, image):
         t_start = self.timer.time()
 
         image.convert(carla.ColorConverter.CityScapesPalette)
+        # save to file
+        image.save_to_disk(f"output/semantic_{self.frame_count}.png")
+        self.frame_count += 1
+
         array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
         array = np.reshape(array, (image.height, image.width, 4))
         array = array[:, :, :3]
@@ -251,6 +279,9 @@ class SensorManager:
         t_start = self.timer.time()
 
         image.convert(carla.ColorConverter.Raw)
+        # save to file
+        image.save_to_disk(f"output/rgb_{self.frame_count}.png")
+        self.frame_count += 1
         array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
         array = np.reshape(array, (image.height, image.width, 4))
         array = array[:, :, :3]
@@ -258,6 +289,7 @@ class SensorManager:
 
         if self.display_man.render_enabled():
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+
 
         t_end = self.timer.time()
         self.time_processing += (t_end-t_start)
@@ -281,6 +313,9 @@ class SensorManager:
         lidar_img = np.zeros((lidar_img_size), dtype=np.uint8)
 
         lidar_img[tuple(lidar_data.T)] = (255, 255, 255)
+        # save to file
+        image.save_to_disk(f"output/lidar_{self.frame_count}.png")
+        self.frame_count += 1
 
         if self.display_man.render_enabled():
             self.surface = pygame.surfarray.make_surface(lidar_img)
@@ -307,6 +342,9 @@ class SensorManager:
         lidar_img = np.zeros((lidar_img_size), dtype=np.uint8)
 
         lidar_img[tuple(lidar_data.T)] = (255, 255, 255)
+        # save to file
+        image.save_to_disk(f"output/semantic_lidar_{self.frame_count}.png")
+        self.frame_count += 1
 
         if self.display_man.render_enabled():
             self.surface = pygame.surfarray.make_surface(lidar_img)
@@ -371,9 +409,9 @@ def run_simulation(args, client):
         # and assign each of them to a grid position,
         # SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), vehicle, {}, display_pos=[0, 0])
 
-        SensorManager(world, display_manager, 'NormalCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), None, {}, display_pos=[0, 0])
+        SensorManager(world, display_manager, 'RGBCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), None, {}, display_pos=[0, 0])
 
-        # SensorManager(world, display_manager, 'SemanticCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), vehicle, {}, display_pos=[0, 0])
+        # SensorManager(world, display_manager, 'SemanticCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), None, {}, display_pos=[0, 0])
 
         # SensorManager(world, display_manager, 'DepthCamera', carla.Transform(carla.Location(x=0, z=2.4), carla.Rotation(yaw=+00)), vehicle, {}, display_pos=[0, 0])
 
@@ -389,6 +427,7 @@ def run_simulation(args, client):
             else:
                 world.wait_for_tick()
 
+            input()
             # Render received data
             display_manager.render()
 
